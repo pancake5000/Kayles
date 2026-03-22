@@ -10,6 +10,7 @@
 #include <cstring>
 #include <vector>
 #include <unistd.h>
+#include <bitset>
 
 using namespace std;
 
@@ -93,9 +94,10 @@ void deserialize_and_print_response(const array<byte, max_response_length> &resp
     state.status = static_cast<uint8_t>(response[12]);
     state.max_pawn = static_cast<uint8_t>(response[13]);
 
-    state.pawn_row.assign(response.begin() + 14, response.begin() + response_size);
+    state.pawn_row.resize(response_size - 14);
+    memcpy(state.pawn_row.data(), &response[14], response_size - 14);
 
-    if (state.pawn_row.size() != (state.max_pawn / 8) + 1)
+    if (state.pawn_row.size() != state.max_pawn / 8u + 1u)
     {
         cerr << "Wrong server response" << endl;
         return;
@@ -130,8 +132,31 @@ void deserialize_and_print_response(const array<byte, max_response_length> &resp
         }
         break;
     default:
+        break;
     }
-
+    cout << "Board state:" << endl;
+    int x = 0;
+    while (x + 8 <= state.max_pawn)
+    {
+        bitset<8> bits(state.pawn_row[x / 8]);
+        cout << bits << " ";
+        x += 8;
+    }
+    if (x < state.max_pawn)
+    {
+        bitset<8> bits(state.pawn_row[x / 8]);
+        while (x < state.max_pawn)
+        {
+            cout << bits[x % 8];
+            x++;
+        }
+    }
+    string eight_space = "        ";
+    for (size_t i = 0; i < state.pawn_row.size(); ++i)
+    {
+        cout << i * 8 << eight_space;
+    }
+    cout << endl;
     return;
 }
 bool send_and_receive(const sockaddr_in &server_addr, const Message &message, int timeout)
@@ -195,7 +220,7 @@ int main(int argc, char *argv[])
     Message message;
     int timeout;
 
-    if (!parse_arguments(argc, argv, server_addr, message, timeout))
+    if (!parse_client_arguments(argc, argv, server_addr, message, timeout))
     {
         return 1;
     }

@@ -36,6 +36,9 @@
 *.exe
 *.out
 *.app
+kayles_client
+kayles_server
 
 # debug information files
 *.dwo
+

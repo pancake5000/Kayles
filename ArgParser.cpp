@@ -11,22 +11,6 @@ using namespace std;
 constexpr uint32_t MAX_TIMEOUT = 99;
 constexpr uint32_t MAX_PORT = 65535;
 
-static bool is_valid_server_address(const string &address)
-{
-    addrinfo hints{};
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_DGRAM;
-
-    addrinfo *result = nullptr;
-    const int status = getaddrinfo(address.c_str(), nullptr, &hints, &result);
-    if (status != 0)
-    {
-        return false;
-    }
-
-    freeaddrinfo(result);
-    return true;
-}
 bool get_server_address(const string &address, uint16_t port, sockaddr_in &server_addr)
 {
     addrinfo hints{};
@@ -41,7 +25,6 @@ bool get_server_address(const string &address, uint16_t port, sockaddr_in &serve
         return false;
     }
 
-    sockaddr_in server_addr{};
     if (result != nullptr)
     {
         server_addr = *reinterpret_cast<sockaddr_in *>(result->ai_addr);
@@ -156,7 +139,7 @@ bool parse_message(const string &text, Message &message)
     return 0;
 }
 
-int parse_arguments(int argc, char *argv[], sockaddr_in &server_addr, Message &message, int &timeout)
+int parse_client_arguments(int argc, char *argv[], sockaddr_in &server_addr, Message &message, int &timeout)
 {
     if (argc != 9)
     {
@@ -176,11 +159,6 @@ int parse_arguments(int argc, char *argv[], sockaddr_in &server_addr, Message &m
     }
 
     string server_address = args["-a"];
-    if (!is_valid_server_address(server_address))
-    {
-        cerr << "Invalid server_address: " << server_address << ". Expected a valid IPv4 address or resolvable hostname." << endl;
-        return 1;
-    }
 
     uint32_t server_port_u32 = 0;
     if (!try_parse_u32(args["-p"], server_port_u32) || server_port_u32 < 1 || server_port_u32 > MAX_PORT)
@@ -203,6 +181,7 @@ int parse_arguments(int argc, char *argv[], sockaddr_in &server_addr, Message &m
         cerr << "Invalid timeout: " << args["-t"] << ". Expected an integer between 1 and " << MAX_TIMEOUT << "." << endl;
         return 1;
     }
+    timeout = static_cast<int>(timeout_u32);
 
     return 0;
 }
