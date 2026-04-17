@@ -22,7 +22,8 @@ struct GameState
 	uint8_t status = WAITING_FOR_OPPONENT;
 	uint8_t max_pawn = 0;
 	vector<uint8_t> pawn_row;
-
+	chrono::system_clock::time_point last_move_A;
+	chrono::system_clock::time_point last_move_B;
 	explicit GameState(uint8_t max_pawn_value)
 		: max_pawn(max_pawn_value),
 		  pawn_row(static_cast<size_t>(max_pawn_value / 8) + 1, 0)
