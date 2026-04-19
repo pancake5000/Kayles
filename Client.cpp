@@ -78,7 +78,7 @@ void deserialize_and_print_response(const array<byte, max_response_length> &resp
         return;
     }
 
-    GameState state(0);
+    GameState state;
     uint32_t net_game_id;
     memcpy(&net_game_id, &response[0], sizeof(net_game_id));
     state.game_id = ntohl(net_game_id);

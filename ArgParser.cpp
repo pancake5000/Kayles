@@ -146,10 +146,22 @@ int parse_client_arguments(int argc, char *argv[], sockaddr_in &server_addr, Mes
         cerr << "Usage: " << argv[0] << " -a <server_address> -p <server_port> -m <message> -t <timeout>" << endl;
         return 1;
     }
+
     unordered_map<string, string> args;
     for (int i = 1; i < argc; i += 2)
     {
-        args[argv[i]] = argv[i + 1];
+        if (i + 1 >= argc)
+        {
+            cerr << "Missing value for argument: " << argv[i] << endl;
+            return 1;
+        }
+        string key = argv[i];
+        if (args.count(key))
+        {
+            cerr << "Duplicate argument: " << key << endl;
+            return 1;
+        }
+        args[key] = argv[i + 1];
     }
 
     if (!args.count("-a") || !args.count("-p") || !args.count("-m") || !args.count("-t"))
@@ -182,6 +194,90 @@ int parse_client_arguments(int argc, char *argv[], sockaddr_in &server_addr, Mes
         return 1;
     }
     timeout = static_cast<int>(timeout_u32);
+
+    return 0;
+}
+int parse_server_arguments(int argc, char *argv[], sockaddr_in &server_addr, vector<uint8_t> &start_board, uint32_t &max_pawn, uint32_t &timeout)
+{
+    if (argc != 9)
+    {
+        cerr << "Usage: " << argv[0] << " -r <pawn_row> -a <address> -p <port> -t <server_timeout>" << endl;
+        return 1;
+    }
+
+    unordered_map<string, string> args;
+    for (int i = 1; i < argc; i += 2)
+    {
+        if (i + 1 >= argc)
+        {
+            cerr << "Missing value for argument: " << argv[i] << endl;
+            return 1;
+        }
+        string key = argv[i];
+        if (args.count(key))
+        {
+            cerr << "Duplicate argument: " << key << endl;
+            return 1;
+        }
+        args[key] = argv[i + 1];
+    }
+
+    if (!args.count("-r") || !args.count("-a") || !args.count("-p") || !args.count("-t"))
+    {
+        cerr << "Missing required arguments. Usage: " << argv[0] << " -r <pawn_row> -a <address> -p <port> -t <server_timeout>" << endl;
+        return 1;
+    }
+
+    const string pawn_row = args["-r"];
+    if (pawn_row.size() < 1 || pawn_row.size() > 256)
+    {
+        cerr << "Invalid pawn_row length: " << pawn_row.size() << ". Expected range 1..256." << endl;
+        return 1;
+    }
+    for (char c : pawn_row)
+    {
+        if (c != '0' && c != '1')
+        {
+            cerr << "Invalid pawn_row: only '0' and '1' are allowed." << endl;
+            return 1;
+        }
+    }
+    if (pawn_row.front() != '1' || pawn_row.back() != '1')
+    {
+        cerr << "Invalid pawn_row: first and last positions must be '1'." << endl;
+        return 1;
+    }
+
+    max_pawn = static_cast<uint32_t>(pawn_row.size() - 1);
+    start_board.assign(max_pawn / 8 + 1, 0);
+    for (uint32_t i = 0; i <= max_pawn; i++)
+    {
+        if (pawn_row[i] == '1')
+        {
+            start_board[i / 8] |= static_cast<uint8_t>(1u << (i % 8));
+        }
+    }
+
+    uint32_t port_u32 = 0;
+    if (!try_parse_u32(args["-p"], port_u32) || port_u32 > MAX_PORT)
+    {
+        cerr << "Invalid port: " << args["-p"] << ". Expected an integer in range 0..65535." << endl;
+        return 1;
+    }
+    uint16_t port = static_cast<uint16_t>(port_u32);
+
+    if (!get_server_address(args["-a"], port, server_addr))
+    {
+        return 1;
+    }
+
+    uint32_t timeout_u32 = 0;
+    if (!try_parse_u32(args["-t"], timeout_u32) || timeout_u32 < 1 || timeout_u32 > MAX_TIMEOUT)
+    {
+        cerr << "Invalid server_timeout: " << args["-t"] << ". Expected an integer between 1 and " << MAX_TIMEOUT << "." << endl;
+        return 1;
+    }
+    timeout = timeout_u32;
 
     return 0;
 }
